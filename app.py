@@ -2,18 +2,41 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Sales Dashboard", layout="wide")
+# -------------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------------
+st.set_page_config(
+    page_title="Advanced Sales BI Dashboard",
+    layout="wide"
+)
 
-st.title("📊 Advanced Sales Analytics Dashboard")
+# -------------------------------------------------------
+# DARK PREMIUM STYLE
+# -------------------------------------------------------
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #0E1117;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-# Load data
+st.title("Advanced Sales Business Intelligence Dashboard")
+
+# -------------------------------------------------------
+# LOAD DATA
+# -------------------------------------------------------
 df = pd.read_csv("sales_data.csv")
 df["Date"] = pd.to_datetime(df["Date"])
 
-# Sidebar Filters
+# -------------------------------------------------------
+# SIDEBAR FILTERS
+# -------------------------------------------------------
 st.sidebar.header("Filters")
 
-# Date range selector
 min_date = df["Date"].min()
 max_date = df["Date"].max()
 
@@ -24,21 +47,21 @@ date_range = st.sidebar.date_input(
     max_value=max_date
 )
 
-# Region filter
 region = st.sidebar.multiselect(
     "Select Region",
     options=df["Region"].unique(),
     default=df["Region"].unique()
 )
 
-# Category filter
 category = st.sidebar.multiselect(
     "Select Category",
     options=df["Category"].unique(),
     default=df["Category"].unique()
 )
 
-# Apply filters
+# -------------------------------------------------------
+# APPLY FILTERS
+# -------------------------------------------------------
 filtered_df = df[
     (df["Date"] >= pd.to_datetime(date_range[0])) &
     (df["Date"] <= pd.to_datetime(date_range[1])) &
@@ -46,21 +69,53 @@ filtered_df = df[
     (df["Category"].isin(category))
 ]
 
-# KPI Section
+# -------------------------------------------------------
+# KPI CALCULATIONS
+# -------------------------------------------------------
 total_sales = filtered_df["Sales"].sum()
 total_profit = filtered_df["Profit"].sum()
 total_orders = len(filtered_df)
 
-col1, col2, col3 = st.columns(3)
+profit_margin = (total_profit / total_sales * 100) if total_sales != 0 else 0
 
-col1.metric("💰 Total Sales", f"₹{total_sales:,.0f}")
-col2.metric("📈 Total Profit", f"₹{total_profit:,.0f}")
-col3.metric("🛒 Total Orders", total_orders)
+# Month-over-Month Growth
+filtered_df["Month"] = filtered_df["Date"].dt.to_period("M")
+monthly_sales = filtered_df.groupby("Month")["Sales"].sum().reset_index()
+
+if len(monthly_sales) > 1:
+    last_month = monthly_sales.iloc[-1]["Sales"]
+    prev_month = monthly_sales.iloc[-2]["Sales"]
+    mom_growth = ((last_month - prev_month) / prev_month * 100) if prev_month != 0 else 0
+else:
+    mom_growth = 0
+
+# Top Region
+top_region = (
+    filtered_df.groupby("Region")["Sales"]
+    .sum()
+    .sort_values(ascending=False)
+)
+
+top_region_name = top_region.index[0] if not top_region.empty else "N/A"
+
+# -------------------------------------------------------
+# KPI DISPLAY
+# -------------------------------------------------------
+st.subheader("Key Business Metrics")
+
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("Total Sales", f"₹{total_sales:,.0f}")
+col2.metric("MoM Growth", f"{mom_growth:.2f}%")
+col3.metric("Profit Margin", f"{profit_margin:.2f}%")
+col4.metric("Top Region", top_region_name)
 
 st.divider()
 
-# Sales Over Time (Interactive Line Chart)
-st.subheader("📅 Sales Over Time")
+# -------------------------------------------------------
+# SALES TREND
+# -------------------------------------------------------
+st.subheader("Sales Trend Over Time")
 
 sales_time = filtered_df.groupby("Date")["Sales"].sum().reset_index()
 
@@ -69,13 +124,16 @@ fig_line = px.line(
     x="Date",
     y="Sales",
     markers=True,
-    title="Sales Trend"
+    title="Sales Trend",
+    template="plotly_dark"
 )
 
 st.plotly_chart(fig_line, use_container_width=True)
 
-# Sales by Category (Interactive Bar)
-st.subheader("📦 Sales by Category")
+# -------------------------------------------------------
+# CATEGORY PERFORMANCE
+# -------------------------------------------------------
+st.subheader("Category Performance")
 
 category_sales = filtered_df.groupby("Category")["Sales"].sum().reset_index()
 
@@ -84,13 +142,16 @@ fig_bar = px.bar(
     x="Category",
     y="Sales",
     color="Category",
-    title="Category-wise Sales"
+    title="Category-wise Sales",
+    template="plotly_dark"
 )
 
 st.plotly_chart(fig_bar, use_container_width=True)
 
-# Region Contribution (Interactive Pie)
-st.subheader("🌍 Region Contribution")
+# -------------------------------------------------------
+# REGION CONTRIBUTION
+# -------------------------------------------------------
+st.subheader("Regional Contribution")
 
 region_sales = filtered_df.groupby("Region")["Sales"].sum().reset_index()
 
@@ -98,7 +159,5 @@ fig_pie = px.pie(
     region_sales,
     names="Region",
     values="Sales",
-    title="Sales by Region"
-)
-
-st.plotly_chart(fig_pie, use_container_width=True)
+    title="Sales by Region",
+    template="plotly_dark_

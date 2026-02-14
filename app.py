@@ -1,63 +1,104 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-st.set_page_config(page_title="Sales Dashboard", layout="wide")
+st.set_page_config(page_title=Sales Dashboard, layout=wide)
 
-st.title("📊 Sales Analytics Dashboard")
+st.title(📊 Advanced Sales Analytics Dashboard)
 
-df = pd.read_csv("sales_data.csv")
-df['Date'] = pd.to_datetime(df['Date'])
+# Load data
+df = pd.read_csv(sales_data.csv)
+df[Date] = pd.to_datetime(df[Date])
 
-st.sidebar.header("Filters")
+# Sidebar Filters
+st.sidebar.header(Filters)
 
+# Date range selector
+min_date = df[Date].min()
+max_date = df[Date].max()
+
+date_range = st.sidebar.date_input(
+    Select Date Range,
+    [min_date, max_date],
+    min_value=min_date,
+    max_value=max_date
+)
+
+# Region filter
 region = st.sidebar.multiselect(
-    "Select Region",
-    options=df["Region"].unique(),
-    default=df["Region"].unique()
+    Select Region,
+    options=df[Region].unique(),
+    default=df[Region].unique()
 )
 
+# Category filter
 category = st.sidebar.multiselect(
-    "Select Category",
-    options=df["Category"].unique(),
-    default=df["Category"].unique()
+    Select Category,
+    options=df[Category].unique(),
+    default=df[Category].unique()
 )
 
+# Apply filters
 filtered_df = df[
-    (df["Region"].isin(region)) &
-    (df["Category"].isin(category))
+    (df[Date] = pd.to_datetime(date_range[0])) &
+    (df[Date] = pd.to_datetime(date_range[1])) &
+    (df[Region].isin(region)) &
+    (df[Category].isin(category))
 ]
 
-total_sales = filtered_df["Sales"].sum()
-total_profit = filtered_df["Profit"].sum()
-total_orders = filtered_df.shape[0]
+# KPI Section
+total_sales = filtered_df[Sales].sum()
+total_profit = filtered_df[Profit].sum()
+total_orders = len(filtered_df)
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric("Total Sales", f"₹{total_sales}")
-col2.metric("Total Profit", f"₹{total_profit}")
-col3.metric("Total Orders", total_orders)
+col1.metric(💰 Total Sales, f₹{total_sales,.0f})
+col2.metric(📈 Total Profit, f₹{total_profit,.0f})
+col3.metric(🛒 Total Orders, total_orders)
 
 st.divider()
 
-st.subheader("Sales by Category")
-category_sales = filtered_df.groupby("Category")["Sales"].sum()
+# Sales Over Time (Interactive Line Chart)
+st.subheader(📅 Sales Over Time)
 
-fig1, ax1 = plt.subplots()
-category_sales.plot(kind="bar", ax=ax1)
-st.pyplot(fig1)
+sales_time = filtered_df.groupby(Date)[Sales].sum().reset_index()
 
-st.subheader("Sales Over Time")
-time_sales = filtered_df.groupby("Date")["Sales"].sum()
+fig_line = px.line(
+    sales_time,
+    x=Date,
+    y=Sales,
+    markers=True,
+    title=Sales Trend
+)
 
-fig2, ax2 = plt.subplots()
-time_sales.plot(ax=ax2)
-st.pyplot(fig2)
+st.plotly_chart(fig_line, use_container_width=True)
 
-st.subheader("Region Contribution")
-region_sales = filtered_df.groupby("Region")["Sales"].sum()
+# Sales by Category (Interactive Bar)
+st.subheader(📦 Sales by Category)
 
-fig3, ax3 = plt.subplots()
-region_sales.plot(kind="pie", autopct='%1.1f%%', ax=ax3)
-ax3.set_ylabel("")
-st.pyplot(fig3)
+category_sales = filtered_df.groupby(Category)[Sales].sum().reset_index()
+
+fig_bar = px.bar(
+    category_sales,
+    x=Category,
+    y=Sales,
+    color=Category,
+    title=Category-wise Sales
+)
+
+st.plotly_chart(fig_bar, use_container_width=True)
+
+# Region Contribution (Interactive Pie)
+st.subheader(🌍 Region Contribution)
+
+region_sales = filtered_df.groupby(Region)[Sales].sum().reset_index()
+
+fig_pie = px.pie(
+    region_sales,
+    names=Region,
+    values=Sales,
+    title=Sales by Region
+)
+
+st.plotly_chart(fig_pie, use_container_width=True)

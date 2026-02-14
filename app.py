@@ -160,4 +160,5 @@ fig_pie = px.pie(
     names="Region",
     values="Sales",
     title="Sales by Region",
-    template="plotly_dark_
+    template="plotly_dark"
+)
